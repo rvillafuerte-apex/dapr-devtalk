@@ -1,0 +1,25 @@
+# Secrets — never commit these
+components/secrets.json
+
+# .NET build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# .NET publish output
+publish/
+out/
+
+# NuGet
+*.nupkg
+packages/
+
+# Logs
+*.log
+dapr.log
+
+# OS
+.DS_Store
+Thumbs.db

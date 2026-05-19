@@ -1,0 +1,20 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: my-llm
+spec:
+  type: conversation.openai
+  version: v1
+  metadata:
+  - name: endpoint
+    value: "https://models.inference.ai.azure.com"
+  - name: key
+    secretKeyRef:
+      name: github-token
+      key: github-token
+  - name: model
+    value: "gpt-4o-mini"
+  - name: cachingEnabled
+    value: false
+auth:
+  secretStore: localsecretstore
