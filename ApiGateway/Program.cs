@@ -1,8 +1,14 @@
 using Dapr.Client;
+using Dapr.AI.Conversation;
+using Dapr.AI.Conversation.Extensions;
+using Dapr.AI.Conversation.ConversationRoles;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDaprClient();
 builder.Services.AddControllers().AddDapr();
+#pragma warning disable DAPR_CONVERSATION
+builder.Services.AddDaprConversationClient();
+#pragma warning restore DAPR_CONVERSATION
 
 var app = builder.Build();
 app.UseCloudEvents();
@@ -96,6 +102,32 @@ app.MapGet("/weather/summarize", async (DaprClient dapr) =>
     var summary = result?.Choices?.FirstOrDefault()?.Message?.Content;
     return Results.Ok(new { summary });
 });
+
+// ── 6. AI — Dapr Conversation API (the proper way!) ──────────────────────────
+// Same result as /weather/summarize but the LLM provider is fully abstracted by Dapr.
+// Swap GitHub Models → Azure OpenAI → Ollama by changing conversation.yaml only.
+#pragma warning disable DAPR_CONVERSATION
+app.MapGet("/weather/summarize/dapr", async (DaprClient dapr, DaprConversationClient conversation) =>
+{
+    var forecasts = await dapr.InvokeMethodAsync<WeatherForecast[]>(
+        HttpMethod.Get, "weather-service", "forecast");
+
+    var forecastText = string.Join("\n", forecasts.Select(
+        f => $"{f.Date:ddd}: {f.TemperatureC}°C, {f.Summary}"));
+
+    var response = await conversation.ConverseAsync(
+        [
+            new ConversationInput(
+                [new UserMessage { Content = [new MessageContent($"Summarize this 5-day weather forecast in 2 friendly sentences:\n{forecastText}")] }]
+            )
+        ],
+        new ConversationOptions("my-llm")
+    );
+
+    var summary = response.Outputs.FirstOrDefault()?.Choices.FirstOrDefault()?.Message.Content;
+    return Results.Ok(new { summary });
+});
+#pragma warning restore DAPR_CONVERSATION
 
 app.Run();
 
